@@ -1,0 +1,118 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Drowsiness Detection System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #fceabb, #f8b500);
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #222;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        video, img {
+            border: 6px solid #333;
+            border-radius: 12px;
+            width: 640px;
+            height: 480px;
+            margin-top: 25px;
+        }
+        .btn {
+            padding: 12px 24px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: background 0.3s;
+        }
+        .start {
+            background-color: #28a745;
+        }
+        .stop {
+            background-color: #dc3545;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        #alert {
+            margin-top: 20px;
+            font-size: 26px;
+            color: #fff;
+            font-weight: bold;
+            display: none;
+            background-color: #ff0000;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚘 Driver Drowsiness Detection</h1>
+    <button class="btn start" onclick="startDetection()">▶️ Start Detection</button>
+    <button class="btn stop" onclick="stopDetection()">⏹️ Stop Detection</button>
+
+    <div>
+        <img id="videoFeed" src="" alt="Video feed will appear here">
+    </div>
+
+    <div id="alert">🚨 Drowsiness Detected!</div>
+
+    <!-- Hidden audio element for alarm -->
+    <audio id="alarmSound" src="{{ url_for('static', filename='alarm.mp3') }}"></audio>
+
+    <script>
+        let interval;
+        const alertBox = document.getElementById("alert");
+        const alarm = document.getElementById("alarmSound");
+
+        function startDetection() {
+            fetch('/start')
+                .then(() => {
+                    document.getElementById('videoFeed').src = '/video';
+                    interval = setInterval(checkDrowsy, 1000);
+                })
+                .catch(err => console.error('Start failed:', err));
+        }
+
+        function stopDetection() {
+            fetch('/stop')
+                .then(() => {
+                    document.getElementById('videoFeed').src = '';
+                    clearInterval(interval);
+                    alertBox.style.display = 'none';
+                    if (!alarm.paused) {
+                        alarm.pause();
+                        alarm.currentTime = 0;
+                    }
+                })
+                .catch(err => console.error('Stop failed:', err));
+        }
+
+        function checkDrowsy() {
+            fetch('/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.drowsy) {
+                        alertBox.style.display = 'block';
+                        if (alarm.paused) alarm.play();
+                    } else {
+                        alertBox.style.display = 'none';
+                        if (!alarm.paused) {
+                            alarm.pause();
+                            alarm.currentTime = 0;
+                        }
+                    }
+                })
+                .catch(err => console.error('Status check failed:', err));
+        }
+    </script>
+</body>
+</html>
